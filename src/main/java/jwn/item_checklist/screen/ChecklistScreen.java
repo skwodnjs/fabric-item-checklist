@@ -56,7 +56,7 @@ public class ChecklistScreen extends Screen {
                 selectedTabIndex++;
                 selectTab(selectedTabIndex);
             }
-        }).dimensions(leftCenter + 40, buttonY, buttonWidth, buttonHeight).build();
+        }).dimensions(leftCenter + 60, buttonY, buttonWidth, buttonHeight).build();
 
         this.addDrawableChild(leftButton);
         this.addDrawableChild(rightButton);
@@ -91,24 +91,25 @@ public class ChecklistScreen extends Screen {
 
     @Override
     public void render(DrawContext context, int mouseX, int mouseY, float delta) {
-        context.fill(0, 0, this.width, this.height, 0x88000000); // 검정색, 50% 투명 배경
+        context.fill(0, 0, this.width, this.height, 0x88000000);
         super.render(context, mouseX, mouseY, delta);
 
-        // 탭 제목
+        int leftWidth = this.width / 2;
+        int centerX = leftWidth / 2;
+
+        // 제목 텍스트
         String title = tabs.get(selectedTabIndex).getDisplayName().getString();
-        int titleX = leftCenter - (textRenderer.getWidth(title) / 2);
+        int titleX = centerX - (textRenderer.getWidth(title) / 2);
         context.drawText(textRenderer, title, titleX, 15, 0xFFFFFF, true);
 
-        int x = 10;
-        int y = 40;
-
-        // 화면에 표시할 수 있는 아이템 수 계산
         int rowsVisible = (this.height - 40) / itemSize;
         int startIdx = scrollOffset * itemsPerRow;
 
         int totalRowWidth = itemsPerRow * itemSize;
-        int itemXStart = leftCenter - (totalRowWidth / 2); // 아이템 목록을 왼쪽 절반 기준으로 가운데 정렬
+        int itemXStart = centerX - (totalRowWidth / 2);
         int itemYStart = 40;
+
+        ItemStack hoveredStack = ItemStack.EMPTY; // 마우스가 올려진 아이템 저장용
 
         for (int i = 0; i < rowsVisible * itemsPerRow && startIdx + i < visibleItems.size(); i++) {
             ItemStack stack = visibleItems.get(startIdx + i);
@@ -117,8 +118,50 @@ public class ChecklistScreen extends Screen {
 
             context.drawItem(stack, drawX, drawY);
             context.drawStackOverlay(textRenderer, stack, drawX, drawY, null);
+
+            // 마우스가 이 아이템 위에 있을 때
+            if (mouseX >= drawX && mouseX < drawX + 16 &&
+                    mouseY >= drawY && mouseY < drawY + 16) {
+                hoveredStack = stack;
+            }
+        }
+
+        // 툴팁 표시
+        if (!hoveredStack.isEmpty()) {
+            context.drawItemTooltip(textRenderer, hoveredStack, mouseX, mouseY);
         }
     }
+
+    @Override
+    public boolean mouseClicked(double mouseX, double mouseY, int button) {
+        if (button == 0) { // 왼쪽 클릭
+            int leftWidth = this.width / 2;
+            int centerX = leftWidth / 2;
+
+            int totalRowWidth = itemsPerRow * itemSize;
+            int itemXStart = centerX - (totalRowWidth / 2);
+            int itemYStart = 40;
+
+            int rowsVisible = (this.height - 40) / itemSize;
+            int startIdx = scrollOffset * itemsPerRow;
+
+            for (int i = 0; i < rowsVisible * itemsPerRow && startIdx + i < visibleItems.size(); i++) {
+                int drawX = itemXStart + (i % itemsPerRow) * itemSize;
+                int drawY = itemYStart + (i / itemsPerRow) * itemSize;
+
+                // 마우스 좌표가 아이템 범위 안에 들어온 경우
+                if (mouseX >= drawX && mouseX < drawX + 16 &&
+                        mouseY >= drawY && mouseY < drawY + 16) {
+                    ItemStack clickedStack = visibleItems.get(startIdx + i);
+                    System.out.println(clickedStack.getName().getString()); // 이름 출력
+                    return true;
+                }
+            }
+        }
+
+        return super.mouseClicked(mouseX, mouseY, button);
+    }
+
 
     @Override
     public boolean shouldPause() {
