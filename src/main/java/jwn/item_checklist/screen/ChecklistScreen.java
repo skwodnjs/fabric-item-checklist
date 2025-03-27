@@ -1,5 +1,6 @@
 package jwn.item_checklist.screen;
 
+import net.fabricmc.fabric.api.itemgroup.v1.FabricItemGroup;
 import net.minecraft.client.MinecraftClient;
 import net.minecraft.client.gui.DrawContext;
 import net.minecraft.client.gui.screen.Screen;
@@ -7,6 +8,7 @@ import net.minecraft.client.gui.widget.ButtonWidget;
 import net.minecraft.item.ItemGroup;
 import net.minecraft.item.ItemGroups;
 import net.minecraft.item.ItemStack;
+import net.minecraft.item.Items;
 import net.minecraft.registry.Registries;
 import net.minecraft.registry.RegistryWrapper;
 import net.minecraft.resource.featuretoggle.FeatureSet;
@@ -19,7 +21,14 @@ import java.util.Objects;
 
 public class ChecklistScreen extends Screen {
     private List<ItemGroup> tabs;
-    private List<ItemStack> visibleItems = new ArrayList<>();
+    private final List<ItemStack> visibleItems = new ArrayList<>();
+    private static final ItemGroup SEARCH_RESULT_TAB = FabricItemGroup.builder()
+            .displayName(Text.translatable("gui.item_checklist.search_result"))
+            .icon(() -> new ItemStack(Items.COMPASS))
+            .entries((context, entries) -> {
+
+            })
+            .build();
 
     private int selectedTabIndex = 0;
 
@@ -45,7 +54,8 @@ public class ChecklistScreen extends Screen {
                 Objects.requireNonNull(Registries.ITEM_GROUP.get(ItemGroups.TOOLS)),
                 Objects.requireNonNull(Registries.ITEM_GROUP.get(ItemGroups.COMBAT)),
                 Objects.requireNonNull(Registries.ITEM_GROUP.get(ItemGroups.FOOD_AND_DRINK)),
-                Objects.requireNonNull(Registries.ITEM_GROUP.get(ItemGroups.INGREDIENTS))
+                Objects.requireNonNull(Registries.ITEM_GROUP.get(ItemGroups.INGREDIENTS)),
+                SEARCH_RESULT_TAB
         );
         selectTab(selectedTabIndex);
 
@@ -150,7 +160,7 @@ public class ChecklistScreen extends Screen {
         context.fill(rightCenter - totalRowWidth / 2, itemYStart, rightCenter + totalRowWidth / 2 + 10, this.height - 5, 0x88000000);
 
         // 상단 텍스트
-        String titleRight = "아이템 체크리스트";
+        String titleRight = Text.translatable("gui.item_checklist.checklist").getString();
         int titleRightX = rightCenter - (textRenderer.getWidth(titleRight) / 2);
         context.drawText(textRenderer, titleRight, titleRightX, 15, 0xFFFFFF, true);
     }
