@@ -1,5 +1,6 @@
 package jwn.item_checklist;
 
+import jwn.item_checklist.keybindings.KeyInputHandler;
 import net.fabricmc.api.ClientModInitializer;
 
 public class ItemChecklistClient implements ClientModInitializer {
@@ -7,6 +8,6 @@ public class ItemChecklistClient implements ClientModInitializer {
 
 	@Override
 	public void onInitializeClient() {
-
+		KeyInputHandler.register();
 	}
 }
