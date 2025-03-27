@@ -7,6 +7,7 @@ import net.minecraft.client.gui.widget.ButtonWidget;
 import net.minecraft.item.ItemGroup;
 import net.minecraft.item.ItemGroups;
 import net.minecraft.item.ItemStack;
+import net.minecraft.registry.Registries;
 import net.minecraft.registry.RegistryWrapper;
 import net.minecraft.resource.featuretoggle.FeatureSet;
 import net.minecraft.text.Text;
@@ -14,6 +15,7 @@ import net.minecraft.util.math.MathHelper;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Objects;
 
 public class ChecklistScreen extends Screen {
     private List<ItemGroup> tabs;
@@ -26,6 +28,7 @@ public class ChecklistScreen extends Screen {
     private final int itemSize = 18;
 
     private int leftCenter;
+    private int rightCenter;
 
     public ChecklistScreen() {
         super(Text.of("My Screen"));
@@ -33,14 +36,25 @@ public class ChecklistScreen extends Screen {
 
     @Override
     protected void init() {
-        tabs = ItemGroups.getGroups();
+        tabs = List.of(
+                Objects.requireNonNull(Registries.ITEM_GROUP.get(ItemGroups.BUILDING_BLOCKS)),
+                Objects.requireNonNull(Registries.ITEM_GROUP.get(ItemGroups.COLORED_BLOCKS)),
+                Objects.requireNonNull(Registries.ITEM_GROUP.get(ItemGroups.NATURAL)),
+                Objects.requireNonNull(Registries.ITEM_GROUP.get(ItemGroups.FUNCTIONAL)),
+                Objects.requireNonNull(Registries.ITEM_GROUP.get(ItemGroups.REDSTONE)),
+                Objects.requireNonNull(Registries.ITEM_GROUP.get(ItemGroups.TOOLS)),
+                Objects.requireNonNull(Registries.ITEM_GROUP.get(ItemGroups.COMBAT)),
+                Objects.requireNonNull(Registries.ITEM_GROUP.get(ItemGroups.FOOD_AND_DRINK)),
+                Objects.requireNonNull(Registries.ITEM_GROUP.get(ItemGroups.INGREDIENTS))
+        );
         selectTab(selectedTabIndex);
 
         int buttonY = 10;
         int buttonWidth = 20;
         int buttonHeight = 20;
 
-        leftCenter = width / 4 - 10;
+        leftCenter = width / 4 - 5;
+        rightCenter = width * 3 / 4 + 5;
 
         // 왼쪽 버튼 (◀)
         ButtonWidget leftButton = ButtonWidget.builder(Text.of("◀"), b -> {
@@ -48,7 +62,7 @@ public class ChecklistScreen extends Screen {
                 selectedTabIndex--;
                 selectTab(selectedTabIndex);
             }
-        }).dimensions(leftCenter - 60, buttonY, buttonWidth, buttonHeight).build();
+        }).dimensions(leftCenter - 65, buttonY, buttonWidth, buttonHeight).build();
 
         // 오른쪽 버튼 (▶)
         ButtonWidget rightButton = ButtonWidget.builder(Text.of("▶"), b -> {
@@ -56,7 +70,7 @@ public class ChecklistScreen extends Screen {
                 selectedTabIndex++;
                 selectTab(selectedTabIndex);
             }
-        }).dimensions(leftCenter + 60, buttonY, buttonWidth, buttonHeight).build();
+        }).dimensions(leftCenter + 65 - buttonWidth, buttonY, buttonWidth, buttonHeight).build();
 
         this.addDrawableChild(leftButton);
         this.addDrawableChild(rightButton);
@@ -78,10 +92,11 @@ public class ChecklistScreen extends Screen {
         scrollOffset = 0; // 탭 전환 시 스크롤 초기화
     }
 
+
     @Override
     public boolean mouseScrolled(double mouseX, double mouseY, double horizontalAmount, double verticalAmount) {
         int totalItems = visibleItems.size();
-        int rowsVisible = (this.height - 20) / itemSize;                        // 한 화면에 보여줄 row 수
+        int rowsVisible = (this.height - 40 - 5) / itemSize;    // 한 화면에 보여줄 row 수
         int maxScroll = Math.max(0, (totalItems / itemsPerRow) - rowsVisible);  // 최대 스크롤 가능 범위
 
         // 마우스 휠로 스크롤 이동
@@ -93,23 +108,23 @@ public class ChecklistScreen extends Screen {
     public void render(DrawContext context, int mouseX, int mouseY, float delta) {
         context.fill(0, 0, this.width, this.height, 0x88000000);
         super.render(context, mouseX, mouseY, delta);
+        
+        // 왼쪽 화면
 
-        int leftWidth = this.width / 2;
-        int centerX = leftWidth / 2;
+        // 상단 텍스트
+        String titleLeft = tabs.get(selectedTabIndex).getDisplayName().getString();
+        int titleLeftX = leftCenter - (textRenderer.getWidth(titleLeft) / 2);
+        context.drawText(textRenderer, titleLeft, titleLeftX, 15, 0xFFFFFF, true);
 
-        // 제목 텍스트
-        String title = tabs.get(selectedTabIndex).getDisplayName().getString();
-        int titleX = centerX - (textRenderer.getWidth(title) / 2);
-        context.drawText(textRenderer, title, titleX, 15, 0xFFFFFF, true);
-
-        int rowsVisible = (this.height - 40) / itemSize;
-        int startIdx = scrollOffset * itemsPerRow;
-
-        int totalRowWidth = itemsPerRow * itemSize;
-        int itemXStart = centerX - (totalRowWidth / 2);
+        // 아이템 그리기
+        int totalRowWidth = itemsPerRow * itemSize;                     // 가로 길이
+        int itemXStart = leftCenter - totalRowWidth / 2;
         int itemYStart = 40;
 
-        ItemStack hoveredStack = ItemStack.EMPTY; // 마우스가 올려진 아이템 저장용
+        int rowsVisible = (this.height - itemYStart - 5) / itemSize;    // row 개수
+        int startIdx = scrollOffset * itemsPerRow;
+
+        ItemStack hoveredStack = ItemStack.EMPTY;                       // 마우스가 올려진 아이템
 
         for (int i = 0; i < rowsVisible * itemsPerRow && startIdx + i < visibleItems.size(); i++) {
             ItemStack stack = visibleItems.get(startIdx + i);
@@ -130,6 +145,14 @@ public class ChecklistScreen extends Screen {
         if (!hoveredStack.isEmpty()) {
             context.drawItemTooltip(textRenderer, hoveredStack, mouseX, mouseY);
         }
+
+        // 오른쪽 화면
+        context.fill(rightCenter - totalRowWidth / 2, itemYStart, rightCenter + totalRowWidth / 2 + 10, this.height - 5, 0x88000000);
+
+        // 상단 텍스트
+        String titleRight = "아이템 체크리스트";
+        int titleRightX = rightCenter - (textRenderer.getWidth(titleRight) / 2);
+        context.drawText(textRenderer, titleRight, titleRightX, 15, 0xFFFFFF, true);
     }
 
     @Override
