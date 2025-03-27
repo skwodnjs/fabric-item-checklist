@@ -1,6 +1,7 @@
 package jwn.item_checklist.keybindings;
 
 import jwn.item_checklist.ItemChecklistClient;
+import jwn.item_checklist.screen.ChecklistScreen;
 import net.fabricmc.fabric.api.client.event.lifecycle.v1.ClientTickEvents;
 import net.fabricmc.fabric.api.client.keybinding.v1.KeyBindingHelper;
 import net.minecraft.client.option.KeyBinding;
@@ -17,8 +18,8 @@ public class KeyInputHandler {
     public static void registerKeyInputs() {
         ClientTickEvents.END_CLIENT_TICK.register(client -> {
             if (OpenChecklistKey.wasPressed()) {
-                if (client.player != null) {
-                    client.player.sendMessage(Text.literal("checklist open!"), false);
+                if (client.player != null && client.world != null) {
+                    client.setScreen(new ChecklistScreen());
                 }
             }
         });
