@@ -18,6 +18,7 @@ import net.minecraft.registry.Registries;
 import net.minecraft.registry.RegistryWrapper;
 import net.minecraft.resource.featuretoggle.FeatureSet;
 import net.minecraft.text.Text;
+import net.minecraft.util.Formatting;
 import net.minecraft.util.math.MathHelper;
 
 import java.util.ArrayList;
@@ -248,25 +249,46 @@ public class ChecklistScreen extends Screen {
             }
         }
 
-        // 툴팁 표시
         if (!RIGHT_HOVERED_STACK.isEmpty()) {
             context.drawItemTooltip(textRenderer, RIGHT_HOVERED_STACK, mouseX, mouseY);
 
             if (client != null && client.player != null) {
-                ItemChecklistHelper.ItemLocation location = ItemChecklistHelper.getItemLocation(client.player, RIGHT_HOVERED_STACK.getItem());
-                String locationText = switch (location) {
-                    case INVENTORY -> "인벤토리에 있음";
-                    case ENDER_CHEST -> "엔더 상자에 있음";
-                    case SHULKER_BOX -> "셜커 상자에 있음";
-                    case NONE -> "";
-                };
+                List<Integer> counts = ItemChecklistHelper.countAllItemObtained(client.player, RIGHT_HOVERED_STACK.getItem());
 
-                if (location != ItemChecklistHelper.ItemLocation.NONE) {
-                    // 툴팁 텍스트 추가
-                    context.drawTooltip(textRenderer, List.of(Text.of(locationText)), Optional.empty(), mouseX, mouseY + 18);
+                List<Text> extraTooltip = new ArrayList<>();
+                int total = 0;
+
+                // 인벤토리 정보
+                if (counts.size() > ItemChecklistHelper.ItemLocation.INVENTORY.getIndex()) {
+                    int inv = counts.get(ItemChecklistHelper.ItemLocation.INVENTORY.getIndex());
+                    total += inv;
+                    extraTooltip.add(Text.literal("Inventory: " + inv).formatted(Formatting.GRAY));
                 }
+
+                // 셜커박스 정보
+                int shulkerBaseIndex = ItemChecklistHelper.ItemLocation.SHULKER_BOX.getIndex();
+                boolean noIteminShulker = true;
+                for (int i = shulkerBaseIndex; i < counts.size(); i++) {
+                    int count = counts.get(i);
+                    if (count > 0) {
+                        noIteminShulker = false;
+                        total += count;
+                        extraTooltip.add(Text.literal("Shulker Box #" + (i - shulkerBaseIndex) + ": " + count).formatted(Formatting.GRAY));
+                    }
+                }
+                if (noIteminShulker) {
+                    extraTooltip.add(Text.literal("Shulker Box: 0").formatted(Formatting.GRAY));
+                }
+
+                // 총합
+                extraTooltip.add(Text.literal(""));
+                extraTooltip.add(Text.literal("Total: " + total).formatted(Formatting.YELLOW));
+
+                // 툴팁 아래쪽에 추가 툴팁 표시
+                context.drawTooltip(textRenderer, extraTooltip, Optional.empty(), mouseX, mouseY + 20);
             }
         }
+
     }
 
     @Override

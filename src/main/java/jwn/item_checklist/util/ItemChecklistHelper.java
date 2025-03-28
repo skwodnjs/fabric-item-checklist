@@ -9,54 +9,51 @@ import net.minecraft.item.Item;
 import net.minecraft.item.ItemStack;
 
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
 
 public class ItemChecklistHelper {
-    // 1. 어디에 있는지 (list)
-    // 2. 몇 개 부족한지 or 넘치는지 (int)
-
     public enum ItemLocation {
-        INVENTORY, ENDER_CHEST, SHULKER_BOX, NONE
+        INVENTORY(0),
+        SHULKER_BOX(1);
+
+        final int index;
+
+        ItemLocation(int i) {
+            index = i;
+        }
+
+        public int getIndex() {
+            return index;
+        }
     }
 
     public static boolean hasEnoughItem(ClientPlayerEntity player, Item checklistItem) {
         int checklistCount = countChecklist(player, checklistItem);
         int inventoryCount = countInventory(player, checklistItem);
-        int enderBoxCount = countEnderChest(player, checklistItem);
-        List<Integer> shulkerBoxCount = new ArrayList<>();
-        for (int i = 0; i < 36; i++) {
-            shulkerBoxCount.add(i, countSingleShulkerBox(player, i, checklistItem));
-        }
-
         int shulkerTotal = 0;
-        for (int i : shulkerBoxCount) {
-            shulkerTotal += i;
+        for (int i = 0; i < 36; i++) {
+            shulkerTotal += countSingleShulkerBox(player, i, checklistItem);
         }
-        int total = inventoryCount + enderBoxCount + shulkerTotal;
+        int total = inventoryCount + shulkerTotal;
 
         return total >= checklistCount;
     }
 
-    public static ItemLocation getItemLocation(ClientPlayerEntity player, Item item) {
-        if (player == null) return ItemLocation.NONE;
+    public static List<Integer> countAllItemObtained(ClientPlayerEntity player, Item checklistItem) {
+        // 전체 길이: 1 (INVENTORY) + 36 (SHULKER_BOX)
+        int totalSize = 2 + 36;
+        List<Integer> result = new ArrayList<>(Collections.nCopies(totalSize, 0));
 
-        // 인벤토리 확인
-        for (ItemStack stack : player.getInventory().main) {
-            if (stack.getItem() == item && !stack.isEmpty()) return ItemLocation.INVENTORY;
-        }
+        // 인벤토리 개수 기록
+        result.set(ItemLocation.INVENTORY.index, countInventory(player, checklistItem));
 
-        // 엔더상자 확인
-        for (ItemStack stack : player.getEnderChestInventory().getHeldStacks()) {
-            if (stack.getItem() == item && !stack.isEmpty()) return ItemLocation.ENDER_CHEST;
-        }
-
-        // 셜커박스 확인
+        // 셜커박스 인벤토리 개수 기록
         for (int i = 0; i < 36; i++) {
-            if (ItemChecklistHelper.countSingleShulkerBox(player, i, item) > 0)
-                return ItemLocation.SHULKER_BOX;
+            result.set(ItemLocation.SHULKER_BOX.index + i, countSingleShulkerBox(player, i, checklistItem));
         }
 
-        return ItemLocation.NONE;
+        return result;
     }
 
 
@@ -82,17 +79,6 @@ public class ItemChecklistHelper {
         }
 
         return inventoryCount;
-    }
-
-    private static int countEnderChest(ClientPlayerEntity player, Item checklistItem) {
-        int enderChestCount = 0;
-        for (ItemStack stack : player.getEnderChestInventory().getHeldStacks()) {
-            if (stack.getItem() == checklistItem) {
-                enderChestCount += stack.getCount();
-            }
-        }
-
-        return enderChestCount;
     }
 
     private static int countSingleShulkerBox(ClientPlayerEntity player, int slot, Item checklistItem) {
