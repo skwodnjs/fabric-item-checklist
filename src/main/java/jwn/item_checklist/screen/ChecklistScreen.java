@@ -1,6 +1,7 @@
 package jwn.item_checklist.screen;
 
 import jwn.item_checklist.keybindings.KeyInputHandler;
+import jwn.item_checklist.util.ItemChecklistHelper;
 import jwn.item_checklist.util.ItemChecklistProvider;
 import net.fabricmc.fabric.api.itemgroup.v1.FabricItemGroup;
 import net.minecraft.client.MinecraftClient;
@@ -22,6 +23,7 @@ import net.minecraft.util.math.MathHelper;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
+import java.util.Optional;
 
 public class ChecklistScreen extends Screen {
     private List<ItemGroup> tabs;
@@ -227,13 +229,15 @@ public class ChecklistScreen extends Screen {
 
             context.drawItem(stack, drawX, drawY);
 
-            int borderColor = 0xFFEE0000;
-            int borderThickness = 1;
+            if (client != null && !ItemChecklistHelper.hasEnoughItem(client.player, stack.getItem())) {
+                int borderColor = 0xFFEE0000;
+                int borderThickness = 1;
 
-            context.fill(drawX, drawY, drawX + ITEM_SIZE, drawY + borderThickness, borderColor);                                // 위
-            context.fill(drawX, drawY + ITEM_SIZE - borderThickness, drawX + ITEM_SIZE, drawY + ITEM_SIZE, borderColor);    // 아래
-            context.fill(drawX, drawY, drawX + borderThickness, drawY + ITEM_SIZE, borderColor);                                // 왼쪽
-            context.fill(drawX + ITEM_SIZE - borderThickness, drawY, drawX + ITEM_SIZE, drawY + ITEM_SIZE, borderColor);    // 오른쪽
+                context.fill(drawX, drawY, drawX + ITEM_SIZE, drawY + borderThickness, borderColor);                                // 위
+                context.fill(drawX, drawY + ITEM_SIZE - borderThickness, drawX + ITEM_SIZE, drawY + ITEM_SIZE, borderColor);    // 아래
+                context.fill(drawX, drawY, drawX + borderThickness, drawY + ITEM_SIZE, borderColor);                                // 왼쪽
+                context.fill(drawX + ITEM_SIZE - borderThickness, drawY, drawX + ITEM_SIZE, drawY + ITEM_SIZE, borderColor);    // 오른쪽
+            }
 
             context.drawStackOverlay(textRenderer, stack, drawX, drawY, null);
 
@@ -247,6 +251,21 @@ public class ChecklistScreen extends Screen {
         // 툴팁 표시
         if (!RIGHT_HOVERED_STACK.isEmpty()) {
             context.drawItemTooltip(textRenderer, RIGHT_HOVERED_STACK, mouseX, mouseY);
+
+            if (client != null && client.player != null) {
+                ItemChecklistHelper.ItemLocation location = ItemChecklistHelper.getItemLocation(client.player, RIGHT_HOVERED_STACK.getItem());
+                String locationText = switch (location) {
+                    case INVENTORY -> "인벤토리에 있음";
+                    case ENDER_CHEST -> "엔더 상자에 있음";
+                    case SHULKER_BOX -> "셜커 상자에 있음";
+                    case NONE -> "";
+                };
+
+                if (location != ItemChecklistHelper.ItemLocation.NONE) {
+                    // 툴팁 텍스트 추가
+                    context.drawTooltip(textRenderer, List.of(Text.of(locationText)), Optional.empty(), mouseX, mouseY + 18);
+                }
+            }
         }
     }
 
