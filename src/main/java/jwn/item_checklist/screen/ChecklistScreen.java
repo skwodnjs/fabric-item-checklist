@@ -226,6 +226,15 @@ public class ChecklistScreen extends Screen {
             int drawY = RIGHT_ITEM_Y + (i / ITEMS_PER_ROW) * ITEM_SPACE_RIGHT;
 
             context.drawItem(stack, drawX, drawY);
+
+            int borderColor = 0xFFEE0000;
+            int borderThickness = 1;
+
+            context.fill(drawX, drawY, drawX + ITEM_SIZE, drawY + borderThickness, borderColor);                                // 위
+            context.fill(drawX, drawY + ITEM_SIZE - borderThickness, drawX + ITEM_SIZE, drawY + ITEM_SIZE, borderColor);    // 아래
+            context.fill(drawX, drawY, drawX + borderThickness, drawY + ITEM_SIZE, borderColor);                                // 왼쪽
+            context.fill(drawX + ITEM_SIZE - borderThickness, drawY, drawX + ITEM_SIZE, drawY + ITEM_SIZE, borderColor);    // 오른쪽
+
             context.drawStackOverlay(textRenderer, stack, drawX, drawY, null);
 
             // 마우스가 이 아이템 위에 있을 때
@@ -409,12 +418,12 @@ public class ChecklistScreen extends Screen {
                     ItemStack toAdd = LEFT_HOVERED_STACK.copy();
                     toAdd.setCount(shiftDown ? toAdd.getMaxCount() : 1);
                     provider.addItemToChecklist(toAdd);
-                    System.out.println(toAdd.getName().getString() + " / " + toAdd.getCount());
                 }
 
                 if (searchBox != null) {
                     searchBox.setFocused(false);
                 }
+
                 return true;
             }
 
@@ -424,7 +433,6 @@ public class ChecklistScreen extends Screen {
                     ItemStack toRemove = RIGHT_HOVERED_STACK.copy();
                     toRemove.setCount(shiftDown ? toRemove.getMaxCount() : 1);
                     provider.removeItemFromChecklist(toRemove);
-                    System.out.println(toRemove.getName().getString() + " / " + toRemove.getCount());
                 }
 
                 if (searchBox != null) {
@@ -432,8 +440,20 @@ public class ChecklistScreen extends Screen {
                 }
                 return true;
             }
+
             if (searchBox != null) {
                 searchBox.setFocused(false);
+            }
+
+        } if (button == 1) {
+            if (!RIGHT_HOVERED_STACK.isEmpty()) {
+                if (client != null && client.player != null && client.player instanceof ItemChecklistProvider provider) {
+                    ItemStack toRemove = RIGHT_HOVERED_STACK.copy();
+                    toRemove.setCount(toRemove.getMaxCount() / 2);
+                    provider.removeItemFromChecklist(toRemove);
+                }
+
+                return true;
             }
         }
 

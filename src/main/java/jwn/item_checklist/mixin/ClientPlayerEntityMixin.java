@@ -33,7 +33,6 @@ public class ClientPlayerEntityMixin implements ItemChecklistProvider {
         // 먼저 기존 스택에 추가 가능한 만큼 채움
         for (ItemStack existing : itemChecklist) {
             if (existing.getItem() == stack.getItem() && existing.getCount() < existing.getMaxCount()) {
-                System.out.println(existing.getMaxCount());
                 int space = existing.getMaxCount() - existing.getCount();
                 int toAdd = Math.min(space, remaining);
                 existing.increment(toAdd);
