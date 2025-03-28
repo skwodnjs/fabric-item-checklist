@@ -122,37 +122,16 @@ public class ChecklistScreen extends Screen {
 
         this.addDrawableChild(leftButton);
         this.addDrawableChild(rightButton);
-
-        boolean isSearchTab = tabs.get(selectedTabIndex) == SEARCH_RESULT_TAB;
-
-        if (isSearchTab) {
-            visibleItems.addAll(SEARCH_RESULTS);
-
-            if (searchBox == null) {
-                searchBox = new TextFieldWidget(
-                        textRenderer,
-                        leftCenter - (this.width * left / (left + right) - 20) / 2, // 대략 중앙 정렬
-                        35,
-                        this.width * left / (left + right) - 20,
-                        20,
-                        Text.of("Search")
-                );
-                searchBox.setMaxLength(50);
-                searchBox.setDrawsBackground(false);
-                this.searchBox.setEditableColor(16777215);
-                searchBox.setEditableColor(0xFFFFFF);
-
-                this.addDrawableChild(searchBox);
-            } else {
-                searchBox.setVisible(true);
-            }
-        }
     }
 
     @Override
-    public boolean charTyped(char chr, int modifiers) {
-        boolean result = super.charTyped(chr, modifiers);
-        System.out.println(searchBox.getText());
+    public boolean keyPressed(int keyCode, int scanCode, int modifiers) {
+        boolean result;
+        if (searchBox != null && searchBox.isFocused()) {
+            result = searchBox.keyPressed(keyCode, scanCode, modifiers);
+        } else {
+            result = super.keyPressed(keyCode, scanCode, modifiers);
+        }
         updateSearchResults(searchBox.getText());
         return result;
     }
@@ -161,7 +140,6 @@ public class ChecklistScreen extends Screen {
         SEARCH_RESULTS.clear();
 
         if (query.isBlank()) {
-            // 검색어가 비어있으면 모든 아이템 다시 추가
             for (ItemGroup group : tabs) {
                 if (group != SEARCH_RESULT_TAB) {
                     SEARCH_RESULTS.addAll(group.getDisplayStacks());
@@ -174,14 +152,16 @@ public class ChecklistScreen extends Screen {
                 if (group == SEARCH_RESULT_TAB) continue;
 
                 for (ItemStack stack : group.getDisplayStacks()) {
-                    if (stack.getName().getString().toLowerCase().contains(lower)) {
+                    String displayName = stack.getName().getString().toLowerCase();
+                    String itemId = Registries.ITEM.getId(stack.getItem()).toString().toLowerCase();
+
+                    if (displayName.contains(lower) || itemId.contains(lower)) {
                         SEARCH_RESULTS.add(stack);
                     }
                 }
             }
         }
 
-        // 현재 검색 탭이면 visibleItems도 갱신
         if (tabs.get(selectedTabIndex) == SEARCH_RESULT_TAB) {
             visibleItems.clear();
             visibleItems.addAll(SEARCH_RESULTS);
@@ -196,7 +176,6 @@ public class ChecklistScreen extends Screen {
         }
     }
 
-
     private void selectTab(int index) {
         visibleItems.clear();
 
@@ -208,9 +187,9 @@ public class ChecklistScreen extends Screen {
             if (searchBox == null) {
                 searchBox = new TextFieldWidget(
                         textRenderer,
-                        leftCenter - (this.width * left / (left + right) - 40) / 2, // 대략 중앙 정렬
+                        leftCenter - this.width * left / (left + right) * 7 / 10 / 2 - 1, // 대략 중앙 정렬
                         35,
-                        this.width * left / (left + right) - 40,
+                        this.width * left / (left + right) * 7 / 10,
                         20,
                         Text.of("Search")
                 );
@@ -330,6 +309,7 @@ public class ChecklistScreen extends Screen {
         if (searchBox != null) {
             searchBox.setX(leftCenter - searchBox.getWidth() / 2);
             searchBox.setY(35); // 고정된 y 값 유지
+            searchBox.setWidth(this.width * left / (left + right) * 7 / 10);
         }
     }
 
@@ -338,5 +318,3 @@ public class ChecklistScreen extends Screen {
         return false;
     }
 }
-
-
