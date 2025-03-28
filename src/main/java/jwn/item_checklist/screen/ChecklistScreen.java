@@ -5,6 +5,7 @@ import net.minecraft.client.MinecraftClient;
 import net.minecraft.client.gui.DrawContext;
 import net.minecraft.client.gui.screen.Screen;
 import net.minecraft.client.gui.widget.ButtonWidget;
+import net.minecraft.client.gui.widget.TextFieldWidget;
 import net.minecraft.item.ItemGroup;
 import net.minecraft.item.ItemGroups;
 import net.minecraft.item.ItemStack;
@@ -46,6 +47,8 @@ public class ChecklistScreen extends Screen {
     int right = 7;
 
     private ItemStack hoveredStack;
+
+    private TextFieldWidget searchBox;
 
     public ChecklistScreen() {
         super(Text.of("My Screen"));
@@ -121,15 +124,61 @@ public class ChecklistScreen extends Screen {
 
         this.addDrawableChild(leftButton);
         this.addDrawableChild(rightButton);
+
+        boolean isSearchTab = tabs.get(selectedTabIndex) == SEARCH_RESULT_TAB;
+
+        if (isSearchTab) {
+            visibleItems.addAll(SEARCH_RESULTS);
+
+            if (searchBox == null) {
+                searchBox = new TextFieldWidget(
+                        textRenderer,
+                        leftCenter - (this.width * left / (left + right) - 20) / 2, // 대략 중앙 정렬
+                        35,
+                        this.width * left / (left + right) - 20,
+                        20,
+                        Text.of("Search")
+                );
+                searchBox.setMaxLength(50);
+                searchBox.setEditableColor(0xFFFFFF);
+                this.addDrawableChild(searchBox);
+            } else {
+                searchBox.setVisible(true);
+            }
+        }
     }
 
     private void selectTab(int index) {
         visibleItems.clear();
 
-        if (tabs.get(index) == SEARCH_RESULT_TAB) {
-            visibleItems.addAll(SEARCH_RESULTS); // 외부 리스트 직접 사용
+        boolean isSearchTab = tabs.get(index) == SEARCH_RESULT_TAB;
+
+        if (isSearchTab) {
+            visibleItems.addAll(SEARCH_RESULTS);
+
+            if (searchBox == null) {
+                searchBox = new TextFieldWidget(
+                        textRenderer,
+                        leftCenter - (this.width * left / (left + right) - 40) / 2, // 대략 중앙 정렬
+                        35,
+                        this.width * left / (left + right) - 40,
+                        20,
+                        Text.of("Search")
+                );
+                searchBox.setMaxLength(50);
+                searchBox.setEditableColor(0xFFFFFF);
+                this.addDrawableChild(searchBox);
+            } else {
+                searchBox.setVisible(true);
+            }
+
         } else {
             visibleItems.addAll(tabs.get(index).getDisplayStacks());
+
+            // 검색 탭이 아니면 숨김
+            if (searchBox != null) {
+                searchBox.setVisible(false);
+            }
         }
 
         scrollOffset = 0; // 탭 전환 시 스크롤 초기화
@@ -154,6 +203,15 @@ public class ChecklistScreen extends Screen {
         int textYStart = 15;
 
         // 왼쪽 화면
+        
+        // 검색 창
+        boolean isSearchTab = tabs.get(selectedTabIndex) == SEARCH_RESULT_TAB;
+
+        if (searchBox != null && searchBox.isVisible()) {
+            searchBox.render(context, mouseX, mouseY, delta);
+        }
+
+        int itemYStart = isSearchTab ? 60 : 40; // 검색창이 들어갈 만큼 아래로
 
         // 상단 텍스트
         String titleLeft = tabs.get(selectedTabIndex).getDisplayName().getString();
@@ -163,7 +221,6 @@ public class ChecklistScreen extends Screen {
         // 아이템 그리기
         int totalRowWidth = itemsPerRow * itemSize;                     // 가로 길이
         int itemXStart = leftCenter - totalRowWidth / 2;
-        int itemYStart = 40;
 
         int rowsVisible = (this.height - itemYStart - 5) / itemSize;    // row 개수
         int startIdx = scrollOffset * itemsPerRow;
@@ -214,6 +271,18 @@ public class ChecklistScreen extends Screen {
         return super.mouseClicked(mouseX, mouseY, button);
     }
 
+    @Override
+    public void resize(MinecraftClient client, int width, int height) {
+        super.resize(client, width, height);
+
+        leftCenter = this.width * left / (left + right) / 2;
+        rightCenter = this.width * left / (left + right) + this.width * right / (left + right) / 2;
+
+        if (searchBox != null) {
+            searchBox.setX(leftCenter - searchBox.getWidth() / 2);
+            searchBox.setY(35); // 고정된 y 값 유지
+        }
+    }
 
     @Override
     public boolean shouldPause() {
