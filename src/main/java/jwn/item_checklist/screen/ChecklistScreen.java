@@ -23,19 +23,24 @@ import java.util.Objects;
 
 public class ChecklistScreen extends Screen {
     private List<ItemGroup> tabs;
-    private final List<ItemStack> visibleItems = new ArrayList<>();
+    private final List<ItemStack> VISIBLE_ITEMS_LEFT = new ArrayList<>();
+    private final List<ItemStack> VISIBLE_ITEMS_RIGHT = new ArrayList<>();
 
     // UI
     final int PADDING = 10;
     final int LEFT_BUTTON_GAP = 65;
-    final int LEFT_ITEM_Y = 40;
-    final int TITLE_Y = 15;
+    final int SEARCH_BOX_Y = 35;
 
     final int LEFT_RATIO = 6;
     final int RIGHT_RATIO = 7;
 
     int LEFT_CENTER;
     int RIGHT_CENTER;
+
+    final int LEFT_ITEM_Y = 40;
+    final int RIGHT_ITEM_Y = 32;
+
+    final int TITLE_Y = 15;
 
     public static final List<ItemStack> SEARCH_RESULTS = new ArrayList<>();
     private static final ItemGroup SEARCH_RESULT_TAB = FabricItemGroup.builder()
@@ -48,11 +53,17 @@ public class ChecklistScreen extends Screen {
 
     private int selectedTabIndex = 0;
 
-    private int scrollOffset = 0; // 스크롤 위치
-    private final int itemsPerRow = 9;
-    private final int itemSize = 18;
+    private int LEFT_SCROLL_OFFSET = 0; // 스크롤 위치
+    private int RIGHT_SCROLL_OFFSET = 0; // 스크롤 위치
+    private final int ITEMS_PER_ROW = 9;
+    private final int ITEM_SIZE = 16;
+    private final int ITEM_PADDING_LEFT = 2;
+    private final int ITEM_PADDING_RIGHT = 4;
+    private final int ITEM_SPACE_LEFT = ITEM_SIZE + ITEM_PADDING_LEFT;
+    private final int ITEM_SPACE_RIGHT = ITEM_SIZE + ITEM_PADDING_RIGHT;
 
-    private ItemStack hoveredStack;
+    private ItemStack LEFT_HOVERED_STACK;
+    private ItemStack RIGHT_HOVERED_STACK;
 
     private TextFieldWidget searchBox;
 
@@ -152,18 +163,18 @@ public class ChecklistScreen extends Screen {
         context.drawText(textRenderer, titleLeft, titleLeftX, TITLE_Y, 0xFFFFFF, true);
 
         // 아이템 그리기
-        int totalRowWidth = itemsPerRow * itemSize;                     // 가로 길이
-        int itemXStart = LEFT_CENTER - totalRowWidth / 2;
+        int totalRowWidthLeft = ITEMS_PER_ROW * ITEM_SPACE_LEFT;                     // 가로 길이
+        int itemXStartLeft = LEFT_CENTER - totalRowWidthLeft / 2;
 
-        int rowsVisible = (this.height - itemYStart - 5) / itemSize;    // row 개수
-        int startIdx = scrollOffset * itemsPerRow;
+        int leftRowsVisible = (this.height - itemYStart - 5) / ITEM_SPACE_LEFT;    // row 개수
+        int leftStartIdx = LEFT_SCROLL_OFFSET * ITEMS_PER_ROW;
 
-        hoveredStack = ItemStack.EMPTY;                       // 마우스가 올려진 아이템
+        LEFT_HOVERED_STACK = ItemStack.EMPTY;
 
-        for (int i = 0; i < rowsVisible * itemsPerRow && startIdx + i < visibleItems.size(); i++) {
-            ItemStack stack = visibleItems.get(startIdx + i);
-            int drawX = itemXStart + (i % itemsPerRow) * itemSize;
-            int drawY = itemYStart + (i / itemsPerRow) * itemSize;
+        for (int i = 0; i < leftRowsVisible * ITEMS_PER_ROW && leftStartIdx + i < VISIBLE_ITEMS_LEFT.size(); i++) {
+            ItemStack stack = VISIBLE_ITEMS_LEFT.get(leftStartIdx + i);
+            int drawX = itemXStartLeft + (i % ITEMS_PER_ROW) * ITEM_SPACE_LEFT;
+            int drawY = itemYStart + (i / ITEMS_PER_ROW) * ITEM_SPACE_LEFT;
 
             context.drawItem(stack, drawX, drawY);
             context.drawStackOverlay(textRenderer, stack, drawX, drawY, null);
@@ -171,23 +182,55 @@ public class ChecklistScreen extends Screen {
             // 마우스가 이 아이템 위에 있을 때
             if (mouseX >= drawX && mouseX < drawX + 16 &&
                     mouseY >= drawY && mouseY < drawY + 16) {
-                hoveredStack = stack;
+                LEFT_HOVERED_STACK = stack;
             }
         }
 
         // 툴팁 표시
-        if (!hoveredStack.isEmpty()) {
-            context.drawItemTooltip(textRenderer, hoveredStack, mouseX, mouseY);
+        if (!LEFT_HOVERED_STACK.isEmpty()) {
+            context.drawItemTooltip(textRenderer, LEFT_HOVERED_STACK, mouseX, mouseY);
         }
 
+
         // 오른쪽 화면
-        context.fill(RIGHT_CENTER - this.width * RIGHT_RATIO / (LEFT_RATIO + RIGHT_RATIO) / 2 + PADDING, PADDING,
-                RIGHT_CENTER + this.width * RIGHT_RATIO / (LEFT_RATIO + RIGHT_RATIO) / 2 - PADDING, this.height - PADDING, 0x88000000);
+        context.fill(RIGHT_CENTER - this.width * RIGHT_RATIO / (LEFT_RATIO + RIGHT_RATIO) / 2 + PADDING,
+                PADDING,
+                RIGHT_CENTER + this.width * RIGHT_RATIO / (LEFT_RATIO + RIGHT_RATIO) / 2 - PADDING,
+                this.height - PADDING, 0x88000000);
 
         // 상단 텍스트
         String titleRight = Text.translatable("gui.item_checklist.checklist").getString();
         int titleRightX = RIGHT_CENTER - (textRenderer.getWidth(titleRight) / 2);
         context.drawText(textRenderer, titleRight, titleRightX, TITLE_Y, 0xFFFFFF, true);
+
+        // 아이템 그리기
+        int totalRowWidthRight = ITEMS_PER_ROW * ITEM_SPACE_RIGHT;                  // 가로 길이
+        int itemXStartRight = RIGHT_CENTER - totalRowWidthRight / 2;
+
+        int rightRowsVisible = (this.height - RIGHT_ITEM_Y - 5) / ITEM_SPACE_RIGHT;   // row 개수
+        int rightStartIdx = RIGHT_SCROLL_OFFSET * ITEMS_PER_ROW;
+
+        RIGHT_HOVERED_STACK = ItemStack.EMPTY;                       // 마우스가 올려진 아이템
+
+        for (int i = 0; i < rightRowsVisible * ITEMS_PER_ROW && rightStartIdx + i < VISIBLE_ITEMS_LEFT.size(); i++) {
+            ItemStack stack = VISIBLE_ITEMS_LEFT.get(rightStartIdx + i);
+            int drawX = itemXStartRight + (i % ITEMS_PER_ROW) * ITEM_SPACE_RIGHT;
+            int drawY = RIGHT_ITEM_Y + (i / ITEMS_PER_ROW) * ITEM_SPACE_RIGHT;
+
+            context.drawItem(stack, drawX, drawY);
+            context.drawStackOverlay(textRenderer, stack, drawX, drawY, null);
+
+            // 마우스가 이 아이템 위에 있을 때
+            if (mouseX >= drawX && mouseX < drawX + 16 &&
+                    mouseY >= drawY && mouseY < drawY + 16) {
+                RIGHT_HOVERED_STACK = stack;
+            }
+        }
+
+        // 툴팁 표시
+        if (!RIGHT_HOVERED_STACK.isEmpty()) {
+            context.drawItemTooltip(textRenderer, RIGHT_HOVERED_STACK, mouseX, mouseY);
+        }
     }
 
     @Override
@@ -247,9 +290,9 @@ public class ChecklistScreen extends Screen {
         }
 
         if (tabs.get(selectedTabIndex) == SEARCH_RESULT_TAB) {
-            visibleItems.clear();
-            visibleItems.addAll(SEARCH_RESULTS);
-            scrollOffset = 0;
+            VISIBLE_ITEMS_LEFT.clear();
+            VISIBLE_ITEMS_LEFT.addAll(SEARCH_RESULTS);
+            LEFT_SCROLL_OFFSET = 0;
         }
 
         if (MinecraftClient.getInstance().world != null && MinecraftClient.getInstance().player != null) {
@@ -261,7 +304,7 @@ public class ChecklistScreen extends Screen {
     }
 
     private void selectTab(int index) {
-        visibleItems.clear();
+        VISIBLE_ITEMS_LEFT.clear();
         if (searchBox != null) {
             searchBox.setText("");
             searchBox.setFocused(false);
@@ -270,13 +313,13 @@ public class ChecklistScreen extends Screen {
         boolean isSearchTab = tabs.get(index) == SEARCH_RESULT_TAB;
 
         if (isSearchTab) {
-            visibleItems.addAll(SEARCH_RESULTS);
+            VISIBLE_ITEMS_LEFT.addAll(SEARCH_RESULTS);
 
             if (searchBox == null) {
                 searchBox = new TextFieldWidget(
                         textRenderer,
                         LEFT_CENTER - this.width * LEFT_RATIO / (LEFT_RATIO + RIGHT_RATIO) * 7 / 10 / 2 - 1,
-                        35,
+                        SEARCH_BOX_Y,
                         this.width * LEFT_RATIO / (LEFT_RATIO + RIGHT_RATIO) * 7 / 10,
                         20,
                         Text.of("Search")
@@ -289,7 +332,7 @@ public class ChecklistScreen extends Screen {
             }
 
         } else {
-            visibleItems.addAll(tabs.get(index).getDisplayStacks());
+            VISIBLE_ITEMS_LEFT.addAll(tabs.get(index).getDisplayStacks());
 
             // 검색 탭이 아니면 숨김
             if (searchBox != null) {
@@ -297,28 +340,47 @@ public class ChecklistScreen extends Screen {
             }
         }
 
-        scrollOffset = 0; // 탭 전환 시 스크롤 초기화
+        LEFT_SCROLL_OFFSET = 0; // 탭 전환 시 스크롤 초기화
     }
 
 
     @Override
     public boolean mouseScrolled(double mouseX, double mouseY, double horizontalAmount, double verticalAmount) {
         boolean isSearchTab = tabs.get(selectedTabIndex) == SEARCH_RESULT_TAB;
-        int itemYStart = isSearchTab ? 60 : 40;
 
-        int leftXStart = LEFT_CENTER - (itemsPerRow * itemSize) / 2;
-        int leftXEnd = leftXStart + itemsPerRow * itemSize;
+        int leftYStart = isSearchTab ? LEFT_ITEM_Y + 20 : LEFT_ITEM_Y;
         int leftYEnd = this.height;
 
-        // 마우스가 왼쪽 아이템 영역 안에 있을 때만 스크롤 적용
+        int leftXStart = LEFT_CENTER - (ITEMS_PER_ROW * ITEM_SPACE_LEFT) / 2;
+        int leftXEnd = leftXStart + ITEMS_PER_ROW * ITEM_SPACE_LEFT;
+
+        // 마우스가 왼쪽 아이템 영역 안에 있을 때 스크롤 적용
         if (mouseX >= leftXStart && mouseX < leftXEnd &&
-                mouseY >= itemYStart && mouseY < leftYEnd) {
+                mouseY >= leftYStart && mouseY < leftYEnd) {
 
-            int totalItems = visibleItems.size();
-            int rowsVisible = (this.height - itemYStart - 5) / itemSize;
-            int maxScroll = Math.max(0, (totalItems / itemsPerRow) - rowsVisible);
+            int totalItems = VISIBLE_ITEMS_LEFT.size();
+            int rowsVisible = (this.height - leftYStart - 5) / ITEM_SPACE_LEFT;
+            int maxScroll = Math.max(0, (totalItems / ITEMS_PER_ROW) - rowsVisible);
 
-            scrollOffset = MathHelper.clamp(scrollOffset - (int) verticalAmount, 0, maxScroll);
+            LEFT_SCROLL_OFFSET = MathHelper.clamp(LEFT_SCROLL_OFFSET - (int) verticalAmount, 0, maxScroll);
+            return true;
+        }
+
+        int rightYStart = RIGHT_ITEM_Y;
+        int rightYEnd = this.height;
+
+        int rightXStart = RIGHT_CENTER - (ITEMS_PER_ROW * ITEM_SPACE_RIGHT) / 2;
+        int rightXEnd = rightXStart + ITEMS_PER_ROW * ITEM_SPACE_RIGHT;
+
+        // 마우스가 오른쪽 아이템 영역 안에 있을 때 스크롤 적용
+        if (mouseX >= rightXStart && mouseX < rightXEnd &&
+                mouseY >= rightYStart && mouseY < rightYEnd) {
+
+            int totalItems = VISIBLE_ITEMS_LEFT.size();
+            int rowsVisible = (this.height - rightYStart - 5) / ITEM_SPACE_RIGHT;
+            int maxScroll = Math.max(0, (totalItems / ITEMS_PER_ROW) - rowsVisible);
+
+            RIGHT_SCROLL_OFFSET = MathHelper.clamp(RIGHT_SCROLL_OFFSET - (int) verticalAmount, 0, maxScroll);
             return true;
         }
 
@@ -333,12 +395,12 @@ public class ChecklistScreen extends Screen {
                 return true;
             }
 
-            if (!hoveredStack.isEmpty()) {
+            if (!LEFT_HOVERED_STACK.isEmpty()) {
                 boolean shiftDown = hasShiftDown();
                 if (shiftDown) {
-                    System.out.println(hoveredStack.getName().getString() + "!!");
+                    System.out.println(LEFT_HOVERED_STACK.getName().getString() + "!!");
                 } else {
-                    System.out.println(hoveredStack.getName().getString());
+                    System.out.println(LEFT_HOVERED_STACK.getName().getString());
                 }
 
                 if (searchBox != null) {
@@ -347,6 +409,19 @@ public class ChecklistScreen extends Screen {
                 return true;
             }
 
+            if (!RIGHT_HOVERED_STACK.isEmpty()) {
+                boolean shiftDown = hasShiftDown();
+                if (shiftDown) {
+                    System.out.println(RIGHT_HOVERED_STACK.getName().getString() + "!!??");
+                } else {
+                    System.out.println(RIGHT_HOVERED_STACK.getName().getString() + "??");
+                }
+
+                if (searchBox != null) {
+                    searchBox.setFocused(false);
+                }
+                return true;
+            }
             if (searchBox != null) {
                 searchBox.setFocused(false);
             }
@@ -364,7 +439,7 @@ public class ChecklistScreen extends Screen {
 
         if (searchBox != null) {
             searchBox.setX(LEFT_CENTER - searchBox.getWidth() / 2);
-            searchBox.setY(35); // 고정된 y 값 유지
+            searchBox.setY(SEARCH_BOX_Y); // 고정된 y 값 유지
             searchBox.setWidth(this.width * LEFT_RATIO / (LEFT_RATIO + RIGHT_RATIO) * 7 / 10);
         }
     }
