@@ -311,7 +311,13 @@ public class ChecklistScreen extends Screen {
             }
 
             if (!hoveredStack.isEmpty()) {
-                System.out.println(hoveredStack.getName().getString()); // 이름 출력
+                boolean shiftDown = hasShiftDown();
+                if (shiftDown) {
+                    System.out.println(hoveredStack.getName().getString() + "!!");
+                } else {
+                    System.out.println(hoveredStack.getName().getString());
+                }
+
                 if (searchBox != null) {
                     searchBox.setFocused(false);
                 }
