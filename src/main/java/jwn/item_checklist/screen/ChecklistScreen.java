@@ -1,12 +1,14 @@
 package jwn.item_checklist.screen;
 
 import jwn.item_checklist.keybindings.KeyInputHandler;
+import jwn.item_checklist.util.ItemChecklistProvider;
 import net.fabricmc.fabric.api.itemgroup.v1.FabricItemGroup;
 import net.minecraft.client.MinecraftClient;
 import net.minecraft.client.gui.DrawContext;
 import net.minecraft.client.gui.screen.Screen;
 import net.minecraft.client.gui.widget.ButtonWidget;
 import net.minecraft.client.gui.widget.TextFieldWidget;
+import net.minecraft.client.network.ClientPlayerEntity;
 import net.minecraft.item.ItemGroup;
 import net.minecraft.item.ItemGroups;
 import net.minecraft.item.ItemStack;
@@ -51,7 +53,7 @@ public class ChecklistScreen extends Screen {
             })
             .build();
 
-    private int selectedTabIndex = 0;
+    private int SELECTED_TAB_INDEX = 0;
 
     private int LEFT_SCROLL_OFFSET = 0; // 스크롤 위치
     private int RIGHT_SCROLL_OFFSET = 0; // 스크롤 위치
@@ -108,7 +110,7 @@ public class ChecklistScreen extends Screen {
                 Objects.requireNonNull(Registries.ITEM_GROUP.get(ItemGroups.INGREDIENTS)),
                 SEARCH_RESULT_TAB
         );
-        selectTab(selectedTabIndex);
+        selectTab(SELECTED_TAB_INDEX);
 
         LEFT_CENTER = this.width * LEFT_RATIO / (LEFT_RATIO + RIGHT_RATIO) / 2;
         RIGHT_CENTER = this.width * LEFT_RATIO / (LEFT_RATIO + RIGHT_RATIO) + this.width * RIGHT_RATIO / (LEFT_RATIO + RIGHT_RATIO) / 2;
@@ -119,22 +121,22 @@ public class ChecklistScreen extends Screen {
 
         // 왼쪽 버튼 (◀)
         ButtonWidget leftButton = ButtonWidget.builder(Text.of("◀"), b -> {
-            if (selectedTabIndex == 0) {
-                selectedTabIndex = tabs.size() - 1;
+            if (SELECTED_TAB_INDEX == 0) {
+                SELECTED_TAB_INDEX = tabs.size() - 1;
             } else {
-                selectedTabIndex--;
+                SELECTED_TAB_INDEX--;
             }
-            selectTab(selectedTabIndex);
+            selectTab(SELECTED_TAB_INDEX);
         }).dimensions(LEFT_CENTER - LEFT_BUTTON_GAP, buttonY, buttonWidth, buttonHeight).build();
 
         // 오른쪽 버튼 (▶)
         ButtonWidget rightButton = ButtonWidget.builder(Text.of("▶"), b -> {
-            if (selectedTabIndex < tabs.size() - 1) {
-                selectedTabIndex++;
+            if (SELECTED_TAB_INDEX < tabs.size() - 1) {
+                SELECTED_TAB_INDEX++;
             } else {
-                selectedTabIndex = 0;
+                SELECTED_TAB_INDEX = 0;
             }
-            selectTab(selectedTabIndex);
+            selectTab(SELECTED_TAB_INDEX);
         }).dimensions(LEFT_CENTER + LEFT_BUTTON_GAP - buttonWidth, buttonY, buttonWidth, buttonHeight).build();
 
         this.addDrawableChild(leftButton);
@@ -144,12 +146,18 @@ public class ChecklistScreen extends Screen {
     @Override
     public void render(DrawContext context, int mouseX, int mouseY, float delta) {
         context.fill(0, 0, this.width, this.height, 0x88000000);
+        ClientPlayerEntity player = MinecraftClient.getInstance().player;
+        if (player instanceof ItemChecklistProvider provider) {
+            VISIBLE_ITEMS_RIGHT.clear();
+            VISIBLE_ITEMS_RIGHT.addAll(provider.getItemChecklist());
+        }
+
         super.render(context, mouseX, mouseY, delta);
 
         // 왼쪽 화면
 
         // 검색 창
-        boolean isSearchTab = tabs.get(selectedTabIndex) == SEARCH_RESULT_TAB;
+        boolean isSearchTab = tabs.get(SELECTED_TAB_INDEX) == SEARCH_RESULT_TAB;
 
         if (searchBox != null && searchBox.isVisible()) {
             searchBox.render(context, mouseX, mouseY, delta);
@@ -158,7 +166,7 @@ public class ChecklistScreen extends Screen {
         int itemYStart = isSearchTab ? LEFT_ITEM_Y + 20 : LEFT_ITEM_Y;
 
         // 상단 텍스트
-        String titleLeft = tabs.get(selectedTabIndex).getDisplayName().getString();
+        String titleLeft = tabs.get(SELECTED_TAB_INDEX).getDisplayName().getString();
         int titleLeftX = LEFT_CENTER - (textRenderer.getWidth(titleLeft) / 2);
         context.drawText(textRenderer, titleLeft, titleLeftX, TITLE_Y, 0xFFFFFF, true);
 
@@ -212,8 +220,8 @@ public class ChecklistScreen extends Screen {
 
         RIGHT_HOVERED_STACK = ItemStack.EMPTY;                       // 마우스가 올려진 아이템
 
-        for (int i = 0; i < rightRowsVisible * ITEMS_PER_ROW && rightStartIdx + i < VISIBLE_ITEMS_LEFT.size(); i++) {
-            ItemStack stack = VISIBLE_ITEMS_LEFT.get(rightStartIdx + i);
+        for (int i = 0; i < rightRowsVisible * ITEMS_PER_ROW && rightStartIdx + i < VISIBLE_ITEMS_RIGHT.size(); i++) {
+            ItemStack stack = VISIBLE_ITEMS_RIGHT.get(rightStartIdx + i);
             int drawX = itemXStartRight + (i % ITEMS_PER_ROW) * ITEM_SPACE_RIGHT;
             int drawY = RIGHT_ITEM_Y + (i / ITEMS_PER_ROW) * ITEM_SPACE_RIGHT;
 
@@ -289,7 +297,7 @@ public class ChecklistScreen extends Screen {
             }
         }
 
-        if (tabs.get(selectedTabIndex) == SEARCH_RESULT_TAB) {
+        if (tabs.get(SELECTED_TAB_INDEX) == SEARCH_RESULT_TAB) {
             VISIBLE_ITEMS_LEFT.clear();
             VISIBLE_ITEMS_LEFT.addAll(SEARCH_RESULTS);
             LEFT_SCROLL_OFFSET = 0;
@@ -346,7 +354,7 @@ public class ChecklistScreen extends Screen {
 
     @Override
     public boolean mouseScrolled(double mouseX, double mouseY, double horizontalAmount, double verticalAmount) {
-        boolean isSearchTab = tabs.get(selectedTabIndex) == SEARCH_RESULT_TAB;
+        boolean isSearchTab = tabs.get(SELECTED_TAB_INDEX) == SEARCH_RESULT_TAB;
 
         int leftYStart = isSearchTab ? LEFT_ITEM_Y + 20 : LEFT_ITEM_Y;
         int leftYEnd = this.height;
@@ -397,10 +405,11 @@ public class ChecklistScreen extends Screen {
 
             if (!LEFT_HOVERED_STACK.isEmpty()) {
                 boolean shiftDown = hasShiftDown();
-                if (shiftDown) {
-                    System.out.println(LEFT_HOVERED_STACK.getName().getString() + "!!");
-                } else {
-                    System.out.println(LEFT_HOVERED_STACK.getName().getString());
+                if (client != null && client.player != null && client.player instanceof ItemChecklistProvider provider) {
+                    ItemStack toAdd = LEFT_HOVERED_STACK.copy();
+                    toAdd.setCount(shiftDown ? toAdd.getMaxCount() : 1);
+                    provider.addItemToChecklist(toAdd);
+                    System.out.println(toAdd.getName().getString() + " / " + toAdd.getCount());
                 }
 
                 if (searchBox != null) {
@@ -411,10 +420,11 @@ public class ChecklistScreen extends Screen {
 
             if (!RIGHT_HOVERED_STACK.isEmpty()) {
                 boolean shiftDown = hasShiftDown();
-                if (shiftDown) {
-                    System.out.println(RIGHT_HOVERED_STACK.getName().getString() + "!!??");
-                } else {
-                    System.out.println(RIGHT_HOVERED_STACK.getName().getString() + "??");
+                if (client != null && client.player != null && client.player instanceof ItemChecklistProvider provider) {
+                    ItemStack toRemove = RIGHT_HOVERED_STACK.copy();
+                    toRemove.setCount(shiftDown ? toRemove.getMaxCount() : 1);
+                    provider.removeItemFromChecklist(toRemove);
+                    System.out.println(toRemove.getName().getString() + " / " + toRemove.getCount());
                 }
 
                 if (searchBox != null) {
