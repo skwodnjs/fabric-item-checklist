@@ -1,5 +1,6 @@
 package jwn.item_checklist.screen;
 
+import jwn.item_checklist.keybindings.KeyInputHandler;
 import net.fabricmc.fabric.api.itemgroup.v1.FabricItemGroup;
 import net.minecraft.client.MinecraftClient;
 import net.minecraft.client.gui.DrawContext;
@@ -137,6 +138,13 @@ public class ChecklistScreen extends Screen {
 
     @Override
     public boolean keyPressed(int keyCode, int scanCode, int modifiers) {
+        if (searchBox == null || !searchBox.isFocused()) {
+            if (KeyInputHandler.OpenChecklistKey.matchesKey(keyCode, scanCode)) {
+                this.close();
+                return true;
+            }
+        }
+
         boolean result;
         if (searchBox != null && searchBox.isFocused()) {
             result = searchBox.keyPressed(keyCode, scanCode, modifiers);
