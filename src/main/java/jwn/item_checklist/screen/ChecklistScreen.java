@@ -1,5 +1,6 @@
 package jwn.item_checklist.screen;
 
+import com.fasterxml.jackson.core.io.CharTypes;
 import net.fabricmc.fabric.api.itemgroup.v1.FabricItemGroup;
 import net.minecraft.client.MinecraftClient;
 import net.minecraft.client.gui.DrawContext;
@@ -76,9 +77,6 @@ public class ChecklistScreen extends Screen {
 
             for (ItemGroup group : sourceGroups) {
                 SEARCH_RESULTS.addAll(group.getDisplayStacks());
-                for (ItemStack itemStack : group.getDisplayStacks()) {
-                    System.out.println(itemStack.getName().getString());
-                }
             }
         }
 
@@ -140,13 +138,64 @@ public class ChecklistScreen extends Screen {
                         Text.of("Search")
                 );
                 searchBox.setMaxLength(50);
+                searchBox.setDrawsBackground(false);
+                this.searchBox.setEditableColor(16777215);
                 searchBox.setEditableColor(0xFFFFFF);
+
                 this.addDrawableChild(searchBox);
             } else {
                 searchBox.setVisible(true);
             }
         }
     }
+
+    @Override
+    public boolean charTyped(char chr, int modifiers) {
+        boolean result = super.charTyped(chr, modifiers);
+        System.out.println(searchBox.getText());
+        updateSearchResults(searchBox.getText());
+        return result;
+    }
+
+    private void updateSearchResults(String query) {
+        SEARCH_RESULTS.clear();
+
+        if (query.isBlank()) {
+            // 검색어가 비어있으면 모든 아이템 다시 추가
+            for (ItemGroup group : tabs) {
+                if (group != SEARCH_RESULT_TAB) {
+                    SEARCH_RESULTS.addAll(group.getDisplayStacks());
+                }
+            }
+        } else {
+            String lower = query.toLowerCase();
+
+            for (ItemGroup group : tabs) {
+                if (group == SEARCH_RESULT_TAB) continue;
+
+                for (ItemStack stack : group.getDisplayStacks()) {
+                    if (stack.getName().getString().toLowerCase().contains(lower)) {
+                        SEARCH_RESULTS.add(stack);
+                    }
+                }
+            }
+        }
+
+        // 현재 검색 탭이면 visibleItems도 갱신
+        if (tabs.get(selectedTabIndex) == SEARCH_RESULT_TAB) {
+            visibleItems.clear();
+            visibleItems.addAll(SEARCH_RESULTS);
+            scrollOffset = 0;
+        }
+
+        if (MinecraftClient.getInstance().world != null && MinecraftClient.getInstance().player != null) {
+            FeatureSet features = MinecraftClient.getInstance().world.getEnabledFeatures();
+            boolean showOpTab = MinecraftClient.getInstance().player.isCreativeLevelTwoOp();
+            RegistryWrapper.WrapperLookup registries = MinecraftClient.getInstance().world.getRegistryManager();
+            ItemGroups.updateDisplayContext(features, showOpTab, registries);
+        }
+    }
+
 
     private void selectTab(int index) {
         visibleItems.clear();
