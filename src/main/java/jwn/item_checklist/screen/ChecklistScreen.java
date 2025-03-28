@@ -10,16 +10,17 @@ import net.minecraft.client.gui.screen.Screen;
 import net.minecraft.client.gui.widget.ButtonWidget;
 import net.minecraft.client.gui.widget.TextFieldWidget;
 import net.minecraft.client.network.ClientPlayerEntity;
-import net.minecraft.item.ItemGroup;
-import net.minecraft.item.ItemGroups;
-import net.minecraft.item.ItemStack;
-import net.minecraft.item.Items;
+import net.minecraft.component.type.MapIdComponent;
+import net.minecraft.item.*;
+import net.minecraft.item.map.MapState;
+import net.minecraft.item.tooltip.TooltipType;
 import net.minecraft.registry.Registries;
 import net.minecraft.registry.RegistryWrapper;
 import net.minecraft.resource.featuretoggle.FeatureSet;
 import net.minecraft.text.Text;
 import net.minecraft.util.Formatting;
 import net.minecraft.util.math.MathHelper;
+import org.jetbrains.annotations.Nullable;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -250,7 +251,7 @@ public class ChecklistScreen extends Screen {
         }
 
         if (!RIGHT_HOVERED_STACK.isEmpty()) {
-            context.drawItemTooltip(textRenderer, RIGHT_HOVERED_STACK, mouseX, mouseY);
+//            context.drawItemTooltip(textRenderer, RIGHT_HOVERED_STACK, mouseX, mouseY);
 
             if (client != null && client.player != null) {
                 List<Integer> counts = ItemChecklistHelper.countAllItemObtained(client.player, RIGHT_HOVERED_STACK.getItem());
@@ -280,12 +281,22 @@ public class ChecklistScreen extends Screen {
                     extraTooltip.add(Text.literal("Shulker Box: 0").formatted(Formatting.GRAY));
                 }
 
-                // 총합
+                // 추가 툴팁 라인
                 extraTooltip.add(Text.literal(""));
                 extraTooltip.add(Text.literal("Total: " + total).formatted(Formatting.YELLOW));
 
-                // 툴팁 아래쪽에 추가 툴팁 표시
-                context.drawTooltip(textRenderer, extraTooltip, Optional.empty(), mouseX, mouseY + 20);
+                TooltipType tooltipType = MinecraftClient.getInstance().options.advancedItemTooltips
+                        ? TooltipType.ADVANCED : TooltipType.BASIC;
+
+                List<Text> tooltip = new ArrayList<>(RIGHT_HOVERED_STACK.getTooltip(
+                        Item.TooltipContext.DEFAULT,
+                        player,
+                        tooltipType
+                ));
+
+                tooltip.add(Text.literal(""));
+                tooltip.addAll(extraTooltip);
+                context.drawTooltip(textRenderer, tooltip, Optional.empty(), mouseX, mouseY + 20);
             }
         }
 
