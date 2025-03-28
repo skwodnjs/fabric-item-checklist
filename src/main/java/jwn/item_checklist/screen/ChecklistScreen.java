@@ -1,6 +1,5 @@
 package jwn.item_checklist.screen;
 
-import com.fasterxml.jackson.core.io.CharTypes;
 import net.fabricmc.fabric.api.itemgroup.v1.FabricItemGroup;
 import net.minecraft.client.MinecraftClient;
 import net.minecraft.client.gui.DrawContext;
@@ -117,7 +116,8 @@ public class ChecklistScreen extends Screen {
                 selectedTabIndex++;
             } else {
                 selectedTabIndex = 0;
-            }selectTab(selectedTabIndex);
+            }
+            selectTab(selectedTabIndex);
         }).dimensions(leftCenter + 65 - buttonWidth, buttonY, buttonWidth, buttonHeight).build();
 
         this.addDrawableChild(leftButton);
@@ -125,14 +125,25 @@ public class ChecklistScreen extends Screen {
     }
 
     @Override
+    public boolean charTyped(char chr, int modifiers) {
+        boolean result;
+        if (searchBox != null && searchBox.isFocused()) {
+            result = searchBox.charTyped(chr, modifiers);
+            updateSearchResults(searchBox.getText());
+            return result;
+        }
+        return super.charTyped(chr, modifiers);
+    }
+
+    @Override
     public boolean keyPressed(int keyCode, int scanCode, int modifiers) {
         boolean result;
         if (searchBox != null && searchBox.isFocused()) {
             result = searchBox.keyPressed(keyCode, scanCode, modifiers);
+            updateSearchResults(searchBox.getText());
         } else {
             result = super.keyPressed(keyCode, scanCode, modifiers);
         }
-        updateSearchResults(searchBox.getText());
         return result;
     }
 
@@ -178,6 +189,10 @@ public class ChecklistScreen extends Screen {
 
     private void selectTab(int index) {
         visibleItems.clear();
+        if (searchBox != null) {
+            searchBox.setText("");
+            searchBox.setFocused(false);
+        }
 
         boolean isSearchTab = tabs.get(index) == SEARCH_RESULT_TAB;
 
@@ -290,9 +305,21 @@ public class ChecklistScreen extends Screen {
     @Override
     public boolean mouseClicked(double mouseX, double mouseY, int button) {
         if (button == 0) {
+            if (searchBox != null && searchBox.mouseClicked(mouseX, mouseY, button)) {
+                searchBox.setFocused(true);
+                return true;
+            }
+
             if (!hoveredStack.isEmpty()) {
                 System.out.println(hoveredStack.getName().getString()); // 이름 출력
+                if (searchBox != null) {
+                    searchBox.setFocused(false);
+                }
                 return true;
+            }
+
+            if (searchBox != null) {
+                searchBox.setFocused(false);
             }
         }
 
