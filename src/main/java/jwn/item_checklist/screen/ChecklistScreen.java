@@ -25,6 +25,18 @@ public class ChecklistScreen extends Screen {
     private List<ItemGroup> tabs;
     private final List<ItemStack> visibleItems = new ArrayList<>();
 
+    // UI
+    final int PADDING = 10;
+    final int LEFT_BUTTON_GAP = 65;
+    final int LEFT_ITEM_Y = 40;
+    final int TITLE_Y = 15;
+
+    final int LEFT_RATIO = 6;
+    final int RIGHT_RATIO = 7;
+
+    int LEFT_CENTER;
+    int RIGHT_CENTER;
+
     public static final List<ItemStack> SEARCH_RESULTS = new ArrayList<>();
     private static final ItemGroup SEARCH_RESULT_TAB = FabricItemGroup.builder()
             .displayName(Text.translatable("gui.item_checklist.search_result"))
@@ -39,13 +51,6 @@ public class ChecklistScreen extends Screen {
     private int scrollOffset = 0; // 스크롤 위치
     private final int itemsPerRow = 9;
     private final int itemSize = 18;
-
-    private int leftCenter;
-    private int rightCenter;
-
-    // ratio
-    int left = 6;
-    int right = 7;
 
     private ItemStack hoveredStack;
 
@@ -94,12 +99,12 @@ public class ChecklistScreen extends Screen {
         );
         selectTab(selectedTabIndex);
 
-        int buttonY = 10;
+        LEFT_CENTER = this.width * LEFT_RATIO / (LEFT_RATIO + RIGHT_RATIO) / 2;
+        RIGHT_CENTER = this.width * LEFT_RATIO / (LEFT_RATIO + RIGHT_RATIO) + this.width * RIGHT_RATIO / (LEFT_RATIO + RIGHT_RATIO) / 2;
+
+        int buttonY = PADDING;
         int buttonWidth = 20;
         int buttonHeight = 20;
-
-        leftCenter = this.width * left / (left + right) / 2;
-        rightCenter = this.width * left / (left + right) + this.width * right / (left + right) / 2;
 
         // 왼쪽 버튼 (◀)
         ButtonWidget leftButton = ButtonWidget.builder(Text.of("◀"), b -> {
@@ -109,7 +114,7 @@ public class ChecklistScreen extends Screen {
                 selectedTabIndex--;
             }
             selectTab(selectedTabIndex);
-        }).dimensions(leftCenter - 65, buttonY, buttonWidth, buttonHeight).build();
+        }).dimensions(LEFT_CENTER - LEFT_BUTTON_GAP, buttonY, buttonWidth, buttonHeight).build();
 
         // 오른쪽 버튼 (▶)
         ButtonWidget rightButton = ButtonWidget.builder(Text.of("▶"), b -> {
@@ -119,10 +124,70 @@ public class ChecklistScreen extends Screen {
                 selectedTabIndex = 0;
             }
             selectTab(selectedTabIndex);
-        }).dimensions(leftCenter + 65 - buttonWidth, buttonY, buttonWidth, buttonHeight).build();
+        }).dimensions(LEFT_CENTER + LEFT_BUTTON_GAP - buttonWidth, buttonY, buttonWidth, buttonHeight).build();
 
         this.addDrawableChild(leftButton);
         this.addDrawableChild(rightButton);
+    }
+
+    @Override
+    public void render(DrawContext context, int mouseX, int mouseY, float delta) {
+        context.fill(0, 0, this.width, this.height, 0x88000000);
+        super.render(context, mouseX, mouseY, delta);
+
+        // 왼쪽 화면
+
+        // 검색 창
+        boolean isSearchTab = tabs.get(selectedTabIndex) == SEARCH_RESULT_TAB;
+
+        if (searchBox != null && searchBox.isVisible()) {
+            searchBox.render(context, mouseX, mouseY, delta);
+        }
+
+        int itemYStart = isSearchTab ? LEFT_ITEM_Y + 20 : LEFT_ITEM_Y;
+
+        // 상단 텍스트
+        String titleLeft = tabs.get(selectedTabIndex).getDisplayName().getString();
+        int titleLeftX = LEFT_CENTER - (textRenderer.getWidth(titleLeft) / 2);
+        context.drawText(textRenderer, titleLeft, titleLeftX, TITLE_Y, 0xFFFFFF, true);
+
+        // 아이템 그리기
+        int totalRowWidth = itemsPerRow * itemSize;                     // 가로 길이
+        int itemXStart = LEFT_CENTER - totalRowWidth / 2;
+
+        int rowsVisible = (this.height - itemYStart - 5) / itemSize;    // row 개수
+        int startIdx = scrollOffset * itemsPerRow;
+
+        hoveredStack = ItemStack.EMPTY;                       // 마우스가 올려진 아이템
+
+        for (int i = 0; i < rowsVisible * itemsPerRow && startIdx + i < visibleItems.size(); i++) {
+            ItemStack stack = visibleItems.get(startIdx + i);
+            int drawX = itemXStart + (i % itemsPerRow) * itemSize;
+            int drawY = itemYStart + (i / itemsPerRow) * itemSize;
+
+            context.drawItem(stack, drawX, drawY);
+            context.drawStackOverlay(textRenderer, stack, drawX, drawY, null);
+
+            // 마우스가 이 아이템 위에 있을 때
+            if (mouseX >= drawX && mouseX < drawX + 16 &&
+                    mouseY >= drawY && mouseY < drawY + 16) {
+                hoveredStack = stack;
+            }
+        }
+
+        // 툴팁 표시
+        if (!hoveredStack.isEmpty()) {
+            context.drawItemTooltip(textRenderer, hoveredStack, mouseX, mouseY);
+        }
+
+        // 오른쪽 화면
+        context.fill(RIGHT_CENTER - this.width * RIGHT_RATIO / (LEFT_RATIO + RIGHT_RATIO) / 2 + PADDING, PADDING,
+                RIGHT_CENTER + this.width * RIGHT_RATIO / (LEFT_RATIO + RIGHT_RATIO) / 2 - PADDING, this.height - PADDING, 0x88000000);
+
+        // 상단 텍스트
+        String titleRight = Text.translatable("gui.item_checklist.checklist").getString();
+        int titleRightX = RIGHT_CENTER - (textRenderer.getWidth(titleRight) / 2);
+        context.drawText(textRenderer, titleRight, titleRightX, TITLE_Y, 0xFFFFFF, true);
     }
 
     @Override
@@ -210,9 +275,9 @@ public class ChecklistScreen extends Screen {
             if (searchBox == null) {
                 searchBox = new TextFieldWidget(
                         textRenderer,
-                        leftCenter - this.width * left / (left + right) * 7 / 10 / 2 - 1, // 대략 중앙 정렬
+                        LEFT_CENTER - this.width * LEFT_RATIO / (LEFT_RATIO + RIGHT_RATIO) * 7 / 10 / 2 - 1,
                         35,
-                        this.width * left / (left + right) * 7 / 10,
+                        this.width * LEFT_RATIO / (LEFT_RATIO + RIGHT_RATIO) * 7 / 10,
                         20,
                         Text.of("Search")
                 );
@@ -241,7 +306,7 @@ public class ChecklistScreen extends Screen {
         boolean isSearchTab = tabs.get(selectedTabIndex) == SEARCH_RESULT_TAB;
         int itemYStart = isSearchTab ? 60 : 40;
 
-        int leftXStart = leftCenter - (itemsPerRow * itemSize) / 2;
+        int leftXStart = LEFT_CENTER - (itemsPerRow * itemSize) / 2;
         int leftXEnd = leftXStart + itemsPerRow * itemSize;
         int leftYEnd = this.height;
 
@@ -258,69 +323,6 @@ public class ChecklistScreen extends Screen {
         }
 
         return super.mouseScrolled(mouseX, mouseY, horizontalAmount, verticalAmount);
-    }
-
-    @Override
-    public void render(DrawContext context, int mouseX, int mouseY, float delta) {
-        context.fill(0, 0, this.width, this.height, 0x88000000);
-        super.render(context, mouseX, mouseY, delta);
-        int textYStart = 15;
-
-        // 왼쪽 화면
-        
-        // 검색 창
-        boolean isSearchTab = tabs.get(selectedTabIndex) == SEARCH_RESULT_TAB;
-
-        if (searchBox != null && searchBox.isVisible()) {
-            searchBox.render(context, mouseX, mouseY, delta);
-        }
-
-        int itemYStart = isSearchTab ? 60 : 40; // 검색창이 들어갈 만큼 아래로
-
-        // 상단 텍스트
-        String titleLeft = tabs.get(selectedTabIndex).getDisplayName().getString();
-        int titleLeftX = leftCenter - (textRenderer.getWidth(titleLeft) / 2);
-        context.drawText(textRenderer, titleLeft, titleLeftX, textYStart, 0xFFFFFF, true);
-
-        // 아이템 그리기
-        int totalRowWidth = itemsPerRow * itemSize;                     // 가로 길이
-        int itemXStart = leftCenter - totalRowWidth / 2;
-
-        int rowsVisible = (this.height - itemYStart - 5) / itemSize;    // row 개수
-        int startIdx = scrollOffset * itemsPerRow;
-
-        hoveredStack = ItemStack.EMPTY;                       // 마우스가 올려진 아이템
-
-        for (int i = 0; i < rowsVisible * itemsPerRow && startIdx + i < visibleItems.size(); i++) {
-            ItemStack stack = visibleItems.get(startIdx + i);
-            int drawX = itemXStart + (i % itemsPerRow) * itemSize;
-            int drawY = itemYStart + (i / itemsPerRow) * itemSize;
-
-            context.drawItem(stack, drawX, drawY);
-            context.drawStackOverlay(textRenderer, stack, drawX, drawY, null);
-
-            // 마우스가 이 아이템 위에 있을 때
-            if (mouseX >= drawX && mouseX < drawX + 16 &&
-                    mouseY >= drawY && mouseY < drawY + 16) {
-                hoveredStack = stack;
-            }
-        }
-
-        // 툴팁 표시
-        if (!hoveredStack.isEmpty()) {
-            context.drawItemTooltip(textRenderer, hoveredStack, mouseX, mouseY);
-        }
-
-        int padding = 10;
-
-        // 오른쪽 화면
-        context.fill(rightCenter - this.width * right / (left + right) / 2 + padding, padding,
-                rightCenter + this.width * right / (left + right) / 2 - padding, this.height - padding, 0x88000000);
-
-        // 상단 텍스트
-        String titleRight = Text.translatable("gui.item_checklist.checklist").getString();
-        int titleRightX = rightCenter - (textRenderer.getWidth(titleRight) / 2);
-        context.drawText(textRenderer, titleRight, titleRightX, textYStart, 0xFFFFFF, true);
     }
 
     @Override
@@ -357,13 +359,13 @@ public class ChecklistScreen extends Screen {
     public void resize(MinecraftClient client, int width, int height) {
         super.resize(client, width, height);
 
-        leftCenter = this.width * left / (left + right) / 2;
-        rightCenter = this.width * left / (left + right) + this.width * right / (left + right) / 2;
+        LEFT_CENTER = this.width * LEFT_RATIO / (LEFT_RATIO + RIGHT_RATIO) / 2;
+        RIGHT_CENTER = this.width * LEFT_RATIO / (LEFT_RATIO + RIGHT_RATIO) + this.width * RIGHT_RATIO / (LEFT_RATIO + RIGHT_RATIO) / 2;
 
         if (searchBox != null) {
-            searchBox.setX(leftCenter - searchBox.getWidth() / 2);
+            searchBox.setX(LEFT_CENTER - searchBox.getWidth() / 2);
             searchBox.setY(35); // 고정된 y 값 유지
-            searchBox.setWidth(this.width * left / (left + right) * 7 / 10);
+            searchBox.setWidth(this.width * LEFT_RATIO / (LEFT_RATIO + RIGHT_RATIO) * 7 / 10);
         }
     }
 
