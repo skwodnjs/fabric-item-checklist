@@ -238,13 +238,26 @@ public class ChecklistScreen extends Screen {
 
     @Override
     public boolean mouseScrolled(double mouseX, double mouseY, double horizontalAmount, double verticalAmount) {
-        int totalItems = visibleItems.size();
-        int rowsVisible = (this.height - 40 - 5) / itemSize;                    // 한 화면에 보여줄 row 수
-        int maxScroll = Math.max(0, (totalItems / itemsPerRow) - rowsVisible);  // 최대 스크롤 가능 범위
+        boolean isSearchTab = tabs.get(selectedTabIndex) == SEARCH_RESULT_TAB;
+        int itemYStart = isSearchTab ? 60 : 40;
 
-        // 마우스 휠로 스크롤 이동
-        scrollOffset = MathHelper.clamp(scrollOffset - (int) verticalAmount, 0, maxScroll);
-        return true;
+        int leftXStart = leftCenter - (itemsPerRow * itemSize) / 2;
+        int leftXEnd = leftXStart + itemsPerRow * itemSize;
+        int leftYEnd = this.height;
+
+        // 마우스가 왼쪽 아이템 영역 안에 있을 때만 스크롤 적용
+        if (mouseX >= leftXStart && mouseX < leftXEnd &&
+                mouseY >= itemYStart && mouseY < leftYEnd) {
+
+            int totalItems = visibleItems.size();
+            int rowsVisible = (this.height - itemYStart - 5) / itemSize;
+            int maxScroll = Math.max(0, (totalItems / itemsPerRow) - rowsVisible);
+
+            scrollOffset = MathHelper.clamp(scrollOffset - (int) verticalAmount, 0, maxScroll);
+            return true;
+        }
+
+        return super.mouseScrolled(mouseX, mouseY, horizontalAmount, verticalAmount);
     }
 
     @Override
